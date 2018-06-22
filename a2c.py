@@ -61,16 +61,14 @@ class A2C:
 
 	def reset(self):
 		self.policy.reset()
-		
+
 	def save_policy(self):
-		# TODO: set filename
-		save_filename = None
-		self.policy.save(self.session, save_filename)
+		pass
 
 	def train(self, ep_X, ep_A, ep_R, ep_adv):
 		train_dict = {self.X: ep_X, self.ADV: ep_adv, self.A: ep_A, self.R: ep_R}
 		if not self.policy.recurrent:
-			train_dict = {self.policy.c_in: self.policy.c_init, self.policy_h_in: self.policy.h_init}		
+			train_dict = {self.policy.c_in: self.policy.c_init, self.policy.h_in: self.policy.h_init}	
 		pLoss, vLoss, ent, _ = self.session.run([self.pg_loss, self.vf_loss, self.entropy, self.train_op],
 			feed_dict=train_dict)
 		info = {}

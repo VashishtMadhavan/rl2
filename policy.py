@@ -62,5 +62,5 @@ class LSTMPolicy:
 		self.prev_h = self.h_init.copy()
 
 	def save(self, session, filename):
-		save_policy(session, self._variables, filename)
+		pass
 
