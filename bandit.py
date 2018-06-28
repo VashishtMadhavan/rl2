@@ -24,7 +24,8 @@ def main():
 	algo = A2C(env=env,
 		session=get_session(),
 	    policy_cls=LSTMPolicy,
-	    policy_kwargs={'hidden_dim': args.hidden, 'action_dim': env.action_space.n},
+	    hidden_dim=args.hidden,
+	    action_dim=env.action_space.n,
 		scope='a2c')
 
 	save_iter = args.train_eps // 10
@@ -36,7 +37,7 @@ def main():
 		track_R = 0
 
 		while not done:
-			action, value = algo.get_actions(obs)
+			action, value = algo.get_actions(obs[None])
 			new_obs, rew, done, info = env.step(action)
 			track_R += rew
 
@@ -47,7 +48,7 @@ def main():
 			ep_D.append(done)
 
 			obs = new_obs
-		_, last_value = algo.get_actions(obs)
+		_, last_value = algo.get_actions(obs[None])
 		ep_X = np.asarray(ep_X, dtype=np.float32)
 		ep_R = np.asarray(ep_R, dtype=np.float32)
 		ep_A = np.asarray(ep_A, dtype=np.int32)
@@ -60,7 +61,8 @@ def main():
 			disc_rew = discount_with_dones(ep_R.tolist(), ep_D.tolist(), args.gamma)
 		ep_adv = disc_rew - ep_V
 
-		train_info = algo.train(ep_X=ep_X, ep_A=ep_A, ep_V=ep_V, ep_adv=ep_adv)
+		train_info = algo.train(ep_X=ep_X, ep_A=ep_A, ep_R=ep_R, ep_adv=ep_adv)
+		algo.reset()
 
 		print("Episode: ", ep)
 		print("Episode Reward: ", track_R)

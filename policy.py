@@ -4,7 +4,8 @@ import tensorflow.contrib.layers as layers
 from utils import *
 
 class LSTMPolicy:
-	def __init__(scope,
+	def __init__(self,
+		scope,
 		inputs,
 		action_dim,
 		hidden_dim=256,

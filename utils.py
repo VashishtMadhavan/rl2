@@ -15,7 +15,6 @@ import h5py
 Gen Purpose Utility Functions
 
 """
-
 def discount_with_dones(rewards, dones, gamma):
     discounted = []
     r = 0
@@ -33,6 +32,12 @@ def get_session():
     session = tf.Session(config=tf_config)
     return session
 
+def minimize_and_clip(optimizer, objective, var_list, clip_val=10):
+    gradients = optimizer.compute_gradients(objective, var_list=var_list)
+    for i, (grad, var) in enumerate(gradients):
+        if grad is not None:
+            gradients[i] = (tf.clip_by_norm(grad, clip_val), var)
+    return optimizer.apply_gradients(gradients)
 
 ALREADY_INITIALIZED = set()
 def initialize(session):

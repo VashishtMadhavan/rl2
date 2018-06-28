@@ -9,7 +9,8 @@ class A2C:
 		session,
 		scope,
 		policy_cls,
-		policy_kwargs,
+		hidden_dim=256,
+		action_dim=10,
 		encode_state=False,
 		grad_clip=10):
 
@@ -20,26 +21,22 @@ class A2C:
 		self.step_size = 7e-5
 		self.session = session
 
-		if encode_state:
-			pass
-			# TODO: add something here for encoding
-		else:
-			self.encoder = None
+		#TODO: make sure to use encode_state when moving to vision domains
 
-		self.X = tf.placeholder(tf.float32, [None, input_dim])
+		self.X = tf.placeholder(tf.float32, [None, self.input_dim])
 		self.ADV = tf.placeholder(tf.float32, [None])
 		self.A = tf.placeholder(tf.int32,   [None])
 		self.R = tf.placeholder(tf.float32, [None])
-		
-		self.policy = policy_cls(scope=scope, inputs=self.X, **policy_kwargs)
+
+		self.policy = policy_cls(scope=scope, inputs=self.X, action_dim=action_dim, hidden_dim=hidden_dim)
 
 		dist = tf.distributions.Categorical(logits=self.policy.pi)
-		neglogpi = tf.nn.sparse_softmax_cross_entropy(logits=self.policy.pi, labels=self.A)
+		neglogpi = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.policy.pi, labels=self.A)
 		self.pg_loss = tf.reduce_mean(self.ADV * neglogpi)
 		self.vf_loss = tf.reduce_mean(tf.square(tf.squeeze(self.policy.V) - self.R) / 2.)			
 		self.entropy = tf.reduce_mean(dist.entropy())
 		self.loss = self.pg_loss - self.ent_coef * self.entropy + self.vf_ceof * self.vf_loss
-		self.act = dist.sample()
+		self.act = tf.squeeze(dist.sample())
 
 		opt = tf.train.RMSPropOptimizer(learning_rate=self.step_size, decay=0.99, epsilon=1e-5)
 		self.train_op = minimize_and_clip(opt, self.loss, var_list=self.policy.variables, clip_val=grad_clip)
@@ -50,11 +47,11 @@ class A2C:
 		if not self.policy.recurrent:
 			actions, values = self.session.run([self.act, self.policy.V], feed_dict={self.X: X})
 		else:
-			actions, values, c_out, h_out = self.session.run([self.act, self.policy.V, self.policy.c_out, self.h_out],
+			actions, values, c_out, h_out = self.session.run([self.act, self.policy.V, self.policy.c_out, self.policy.h_out],
 				feed_dict={self.X: X,
 				self.policy.c_in: self.policy.prev_c,
 				self.policy.h_in: self.policy.prev_h})
-			self.policy.prev_c = c_out 
+			self.policy.prev_c = c_out
 			self.policy.prev_h = h_out
 		return actions, values
 
@@ -66,8 +63,9 @@ class A2C:
 
 	def train(self, ep_X, ep_A, ep_R, ep_adv):
 		train_dict = {self.X: ep_X, self.ADV: ep_adv, self.A: ep_A, self.R: ep_R}
-		if not self.policy.recurrent:
-			train_dict = {self.policy.c_in: self.policy.c_init, self.policy.h_in: self.policy.h_init}	
+		if self.policy.recurrent:
+			train_dict[self.policy.c_in] = self.policy.c_init
+			train_dict[self.policy.h_in] = self.policy.h_init
 		pLoss, vLoss, ent, _ = self.session.run([self.pg_loss, self.vf_loss, self.entropy, self.train_op],
 			feed_dict=train_dict)
 		info = {}
