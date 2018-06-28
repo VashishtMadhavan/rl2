@@ -9,7 +9,7 @@ from a2c import A2C
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--k', type=int, default=5, help='num arms')
-	parser.add_argument('--n', type=int, default=10, help='num trials')
+	parser.add_argument('--n', type=int, default=100, help='num trials')
 	parser.add_argument('--train_eps', type=int, default=int(2e4), help='training episodes')
 	parser.add_argument('--seed', type=int, default=1, help='experiment seed')
 
@@ -28,13 +28,15 @@ def main():
 	    action_dim=env.action_space.n,
 		scope='a2c')
 
-	save_iter = args.train_eps // 10
+	save_iter = args.train_eps // 20
+	average_returns = []
 
 	for ep in range(args.train_eps):
 		obs = env.reset()
 		done = False
 		ep_X, ep_R, ep_A, ep_V, ep_D = [], [], [], [], []
 		track_R = 0
+		algo.reset()
 
 		while not done:
 			action, value = algo.get_actions(obs[None])
@@ -62,12 +64,10 @@ def main():
 		ep_adv = disc_rew - ep_V
 
 		train_info = algo.train(ep_X=ep_X, ep_A=ep_A, ep_R=ep_R, ep_adv=ep_adv)
-		algo.reset()
+		average_returns.append(track_R)
 
-		print("Episode: ", ep)
-		print("Episode Reward: ", track_R)
-		for k in sorted(train_info.keys()):
-			print("{}: {}".format(k, train_info[k]))
-
+		if ep % save_iter == 0 and ep != 0:
+			print("Episode: {}".format(ep))
+			print("MeanReward: {}".format(np.mean(average_returns[:-100])))
 if __name__=='__main__':
 	main()
