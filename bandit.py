@@ -23,7 +23,7 @@ def main():
 
 	algo = A2C(env=env,
 		session=get_session(),
-	    policy=LSTMPolicy,
+	    policy_cls=LSTMPolicy,
 	    policy_kwargs={'hidden_dim': args.hidden, 'action_dim': env.action_space.n},
 		scope='a2c')
 
@@ -67,3 +67,5 @@ def main():
 		for k in sorted(train_info.keys()):
 			print("{}: {}".format(k, train_info[k]))
 
+if __name__=='__main__':
+	main()

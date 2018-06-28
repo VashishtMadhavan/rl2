@@ -15,8 +15,7 @@ class A2C:
 
 		self.input_dim = env.observation_space.shape[0]
 		self.action_dim = env.action_space.n
-		self.hidden_dim = hidden_dim
-		self.vf_ceof = 0.5
+		self.vf_ceof = 0.05
 		self.ent_coef = 0.01
 		self.step_size = 7e-5
 		self.session = session
