@@ -8,7 +8,7 @@ from a2c import A2C
 
 def main():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--k', type=int, default=5, help='num arms')
+	parser.add_argument('--k', type=int, default=2, help='num arms')
 	parser.add_argument('--n', type=int, default=100, help='num trials')
 	parser.add_argument('--train_eps', type=int, default=int(2e4), help='training episodes')
 	parser.add_argument('--seed', type=int, default=1, help='experiment seed')
@@ -30,12 +30,13 @@ def main():
 
 	save_iter = args.train_eps // 20
 	average_returns = []
+	average_regret = []
 
 	for ep in range(args.train_eps):
 		obs = env.reset()
 		done = False
 		ep_X, ep_R, ep_A, ep_V, ep_D = [], [], [], [], []
-		track_R = 0
+		track_R = 0; track_regret = np.max(env.unwrapped.probs) * args.n
 		algo.reset()
 
 		while not done:
@@ -62,12 +63,15 @@ def main():
 		else:
 			disc_rew = discount_with_dones(ep_R.tolist(), ep_D.tolist(), args.gamma)
 		ep_adv = disc_rew - ep_V
+		track_regret -= track_R
 
 		train_info = algo.train(ep_X=ep_X, ep_A=ep_A, ep_R=ep_R, ep_adv=ep_adv)
 		average_returns.append(track_R)
+		average_regret.append(track_regret)
 
 		if ep % save_iter == 0 and ep != 0:
 			print("Episode: {}".format(ep))
-			print("MeanReward: {}".format(np.mean(average_returns[:-100])))
+			print("MeanReward: {}".format(np.mean(average_returns[:-10])))
+			print("MeanRegret: {}".format(np.mean(average_regret[:-10])))
 if __name__=='__main__':
 	main()
