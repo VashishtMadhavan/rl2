@@ -31,18 +31,21 @@ def main():
 	save_iter = args.train_eps // 20
 	average_returns = []
 	average_regret = []
+	average_subopt = []
 
 	for ep in range(args.train_eps):
 		obs = env.reset()
 		done = False
 		ep_X, ep_R, ep_A, ep_V, ep_D = [], [], [], [], []
 		track_R = 0; track_regret = np.max(env.unwrapped.probs) * args.n
+		best_action = np.argmax(env.unwrapped.probs); num_suboptimal = 0
 		algo.reset()
 
 		while not done:
 			action, value = algo.get_actions(obs[None])
 			new_obs, rew, done, info = env.step(action)
 			track_R += rew
+			num_suboptimal += int(action != best_action)
 
 			ep_X.append(obs)
 			ep_A.append(action)
@@ -68,10 +71,14 @@ def main():
 		train_info = algo.train(ep_X=ep_X, ep_A=ep_A, ep_R=ep_R, ep_adv=ep_adv)
 		average_returns.append(track_R)
 		average_regret.append(track_regret)
+		average_subopt.append(num_suboptimal)
 
 		if ep % save_iter == 0 and ep != 0:
 			print("Episode: {}".format(ep))
+			print("Probs: {}".format(env.unwrapped.probs))
 			print("MeanReward: {}".format(np.mean(average_returns[:-10])))
 			print("MeanRegret: {}".format(np.mean(average_regret[:-10])))
+			print("NumSuboptimal: {}".format(np.mean(average_subopt[:-10])))
+			print()
 if __name__=='__main__':
 	main()

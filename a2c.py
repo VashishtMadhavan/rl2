@@ -18,7 +18,7 @@ class A2C:
 		self.action_dim = env.action_space.n
 		self.vf_ceof = 0.05
 		self.ent_coef = 0.01
-		self.step_size = 1e-3
+		self.step_size = 1e-2
 		self.session = session
 
 		#TODO: make sure to use encode_state when moving to vision domains
