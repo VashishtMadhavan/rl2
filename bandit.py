@@ -39,6 +39,7 @@ def main():
 		ep_X, ep_R, ep_A, ep_V, ep_D = [], [], [], [], []
 		track_R = 0; track_regret = np.max(env.unwrapped.probs) * args.n
 		best_action = np.argmax(env.unwrapped.probs); num_suboptimal = 0
+		action_hist = np.zeros(env.action_space.n)
 		algo.reset()
 
 		while not done:
@@ -46,6 +47,7 @@ def main():
 			new_obs, rew, done, info = env.step(action)
 			track_R += rew
 			num_suboptimal += int(action != best_action)
+			action_hist[action] += 1	
 
 			ep_X.append(obs)
 			ep_A.append(action)
@@ -75,7 +77,9 @@ def main():
 
 		if ep % save_iter == 0 and ep != 0:
 			print("Episode: {}".format(ep))
+			print("Action Hist: {}".format(action_hist / float(sum(action_hist))))
 			print("Probs: {}".format(env.unwrapped.probs))
+			print("LastReward: {}".format(average_returns[-1]))
 			print("MeanReward: {}".format(np.mean(average_returns[:-10])))
 			print("MeanRegret: {}".format(np.mean(average_regret[:-10])))
 			print("NumSuboptimal: {}".format(np.mean(average_subopt[:-10])))
