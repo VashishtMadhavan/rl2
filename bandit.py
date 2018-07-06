@@ -8,9 +8,10 @@ from a2c import A2C
 
 def main():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--k', type=int, default=2, help='num arms')
-	parser.add_argument('--n', type=int, default=100, help='num trials')
+	parser.add_argument('--train_env', type=str, default="MediumBandit-v0", help='env for meta-training')
+	parser.add_argument('--test_env', type=str, default="EasyBandit-v0", help='env for meta-testing')
 	parser.add_argument('--train_eps', type=int, default=int(2e4), help='training episodes')
+	parser.add_argument('--test_eps', type=int, default=300, help='test episodes')
 	parser.add_argument('--seed', type=int, default=1, help='experiment seed')
 
 	# Training Hyperparameters
@@ -18,8 +19,11 @@ def main():
 	parser.add_argument('--gamma', type=float, default=0.8, help='discount factor')
 	args = parser.parse_args()
 
-	env_id = "Bandit_k{}_n{}-v0".format(args.k, args.n)
-	env = gym.make(env_id)
+	env = gym.make(args.train_env)
+	env.seed(args.seed)
+
+	eval_env = gym.make(args.test_env)
+	eval_env.seed(args.seed)
 
 	algo = A2C(env=env,
 		session=get_session(),
@@ -37,7 +41,7 @@ def main():
 		obs = env.reset()
 		done = False
 		ep_X, ep_R, ep_A, ep_V, ep_D = [], [], [], [], []
-		track_R = 0; track_regret = np.max(env.unwrapped.probs) * args.n
+		track_R = 0; track_regret = np.max(env.unwrapped.probs) * env.unwrapped.n
 		best_action = np.argmax(env.unwrapped.probs); num_suboptimal = 0
 		action_hist = np.zeros(env.action_space.n)
 		algo.reset()
@@ -47,7 +51,7 @@ def main():
 			new_obs, rew, done, info = env.step(action)
 			track_R += rew
 			num_suboptimal += int(action != best_action)
-			action_hist[action] += 1	
+			action_hist[action] += 1
 
 			ep_X.append(obs)
 			ep_A.append(action)
@@ -77,12 +81,31 @@ def main():
 
 		if ep % save_iter == 0 and ep != 0:
 			print("Episode: {}".format(ep))
-			print("Action Hist: {}".format(action_hist / float(sum(action_hist))))
+			print("ActionHist: {}".format(action_hist))
 			print("Probs: {}".format(env.unwrapped.probs))
-			print("LastReward: {}".format(average_returns[-1]))
-			print("MeanReward: {}".format(np.mean(average_returns[:-10])))
-			print("MeanRegret: {}".format(np.mean(average_regret[:-10])))
-			print("NumSuboptimal: {}".format(np.mean(average_subopt[:-10])))
-			print()
+			print("MeanReward: {}".format(np.mean(average_returns[-50:])))
+			print("MeanRegret: {}".format(np.mean(average_regret[-50:])))
+			print("NumSuboptimal: {}".format(np.mean(average_subopt[-50:])))
+
+	print()
+	test_regrets = []; test_rewards = []
+	for test_ep in range(args.test_eps):
+		obs = eval_env.reset()
+		algo.reset()
+		done = False
+		track_regret = np.max(eval_env.unwrapped.probs) * eval_env.unwrapped.n
+		track_R = 0
+
+		while not done:
+			action, value = algo.get_actions(obs[None])
+			new_obs, rew, done, info = eval_env.step(action)
+			obs = new_obs
+			track_R += rew
+
+		test_regrets.append(track_regret - track_R)
+		test_rewards.append(track_R)
+	print('Mean Test Cumulative Regret: {}'.format(np.mean(test_regrets)))
+	print('Mean Test Reward: {}'.format(np.mean(test_rewards)))
+
 if __name__=='__main__':
 	main()
