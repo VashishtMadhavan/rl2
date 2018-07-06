@@ -34,9 +34,9 @@ class A2C:
 		self.pg_loss = tf.reduce_mean(self.ADV * neglogpi)
 		self.vf_loss = tf.reduce_mean(tf.square(tf.squeeze(self.policy.V) - self.R) / 2.)
 
-		a0 = self.policy.pi - tf.reduce_max(self.policy.pi, 1, keep_dims=True)
+		a0 = self.policy.pi - tf.reduce_max(self.policy.pi, 1, keepdims=True)
 		ea0 = tf.exp(a0)
-		z0 = tf.reduce_sum(ea0, 1, keep_dims=True)
+		z0 = tf.reduce_sum(ea0, 1, keepdims=True)
 		p0 = ea0 / z0
 		self.entropy = tf.reduce_mean(tf.reduce_sum(p0 * (tf.log(z0) - a0), 1))
 
